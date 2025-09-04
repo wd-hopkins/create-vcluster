@@ -37,6 +37,7 @@ runs:
           echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
           echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
         post: |
+          unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
             --context ${{ inputs.context }} \
             --namespace ${{ inputs.namespace }}
