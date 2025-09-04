@@ -1,0 +1,42 @@
+name: 'Create Vcluster'
+description: 'Downloads and creates a vcluster in a specified k8s context'
+inputs:
+  context:
+    description: 'K8s context to use'
+    required: true
+  namespace:
+    description: 'K8s namespace to create vcluster in'
+    required: true
+  vcluster-name:
+    description: 'Name of the vcluster'
+    required: true
+outputs:
+  vcluster-context:
+    description: "Context name of the vcluster for use in kubectl commands"
+    value: ${{ steps.create-vcluster.outputs.vcluster-context }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install vCluster CLI
+      uses: loft-sh/setup-vcluster@main
+      with:
+        kubectl-install: false
+    - name: Create vCluster
+      id: create-vcluster
+      uses: wd-hopkins/create-vcluster/with-post-step@main
+      with:
+        main: |
+          vcluster create ${{ inputs.vcluster-name }} \
+            --context ${{ inputs.context }} \
+            --namespace ${{ inputs.namespace }} \
+            --connect=false
+          vcluster connect ${{ inputs.vcluster-name }} \
+            --context ${{ inputs.context }} \
+            --namespace ${{ inputs.namespace }} \
+            --print > ./kubeconfig.yaml
+          echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
+          echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
+        post: |
+          vcluster delete ${{ inputs.vcluster-name }} \
+            --context ${{ inputs.context }} \
+            --namespace ${{ inputs.namespace }}
