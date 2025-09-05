@@ -26,13 +26,7 @@ runs:
       run: |        
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
-          --namespace ${{ inputs.namespace }} \
-          --connect=false
-        vcluster connect ${{ inputs.vcluster-name }} \
-          --context ${{ inputs.context }} \
-          --namespace ${{ inputs.namespace }} \
-          --background-proxy=true \
-          --print > ./kubeconfig.yaml
+          --namespace ${{ inputs.namespace }}
         
         docker ps
         
@@ -55,6 +49,7 @@ runs:
     - name: Delete vCluster post step
       id: create-vcluster
       uses: wd-hopkins/create-vcluster/with-post-step@main
+      if: always()
       with:
         main: |
           echo "no op"
