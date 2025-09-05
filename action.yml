@@ -26,23 +26,15 @@ runs:
       run: |        
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
-          --namespace ${{ inputs.namespace }}
-        
-        docker ps
+          --namespace ${{ inputs.namespace }} \
+          --connect=false \
+          --silent \
+          --print > kubeconfig.yaml
         
         vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
         
-        echo "waiting 60s for vcluster to become available..."
-        start_time=$(date +%s)
-        while ! nc -z localhost "$vcluster_port";
-        do
-          now=$(date +%s)
-          if [ $(( now - start_time )) -gt 60 ]; then
-            echo "ERROR: VCluster port did not become available within 60 seconds"
-            exit 1
-          fi
-          sleep 1;
-        done
+        kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
+          port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":8443 &
         
         echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
         echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
@@ -53,7 +45,6 @@ runs:
       with:
         main: |
           echo "no op"
-          docker ps -a
         post: |
           unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
