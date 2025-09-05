@@ -22,35 +22,43 @@ runs:
       with:
         kubectl-install: false
     - name: Create vCluster
+      shell: bash -eux {0}
+      run: |
+        vcluster create ${{ inputs.vcluster-name }} \
+          --context ${{ inputs.context }} \
+          --namespace ${{ inputs.namespace }} \
+          --connect=false
+        vcluster connect ${{ inputs.vcluster-name }} \
+          --context ${{ inputs.context }} \
+          --namespace ${{ inputs.namespace }} \
+          --print > ./kubeconfig.yaml &
+        
+        sed -i '/^Forwarding from/d' kubeconfig.yaml
+        
+        cat kubeconfig.yaml
+        
+        vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
+        
+        echo "waiting 60s for vcluster to become available..."
+        start_time=$(date +%s)
+        while ! nc -z localhost "$vcluster_port";
+        do
+          now=$(date +%s)
+          if [ $(( now - start_time )) -gt 60 ]; then
+            echo "ERROR: VCluster port did not become available within 60 seconds"
+            exit 1
+          fi
+          sleep 1;
+        done
+        
+        echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
+        echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
+    - name: Delete vCluster post step
       id: create-vcluster
       uses: wd-hopkins/create-vcluster/with-post-step@main
       with:
         main: |
-          vcluster create ${{ inputs.vcluster-name }} \
-            --context ${{ inputs.context }} \
-            --namespace ${{ inputs.namespace }} \
-            --connect=false
-          vcluster connect ${{ inputs.vcluster-name }} \
-            --context ${{ inputs.context }} \
-            --namespace ${{ inputs.namespace }} \
-            --print > ./kubeconfig.yaml
-          
-          vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
-
-          echo "waiting 60s for vcluster to become available..."
-          start_time=$(date +%s)
-          while ! nc -z localhost "$vcluster_port";
-          do
-              now=$(date +%s)
-              if [ $(( now - start_time )) -gt 60 ]; then
-                  echo "ERROR: VCluster port did not become available within 60 seconds"
-                  exit 1
-              fi
-              sleep 1;
-          done
-          
-          echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
-          echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
+          exit 0
         post: |
           unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
