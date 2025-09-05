@@ -23,9 +23,7 @@ runs:
         kubectl-install: false
     - name: Create vCluster
       shell: bash -eux {0}
-      run: |
-        docker ps
-        
+      run: |        
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
@@ -33,14 +31,10 @@ runs:
         vcluster connect ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
+          --background-proxy=true \
           --print > ./kubeconfig.yaml
         
         docker ps
-        ps -a
-        
-        sed -i '/^Forwarding from/d' kubeconfig.yaml
-        
-        cat kubeconfig.yaml
         
         vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
         
