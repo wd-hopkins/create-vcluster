@@ -35,9 +35,7 @@ runs:
         vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
         
         kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
-          port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 &
-        
-        ps -a
+          port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 > /dev/null 2>&1 &
         
         echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
         echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
