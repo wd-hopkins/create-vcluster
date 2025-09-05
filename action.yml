@@ -53,6 +53,7 @@ runs:
       with:
         main: |
           echo "no op"
+          docker ps -a
         post: |
           unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
