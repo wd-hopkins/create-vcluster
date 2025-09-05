@@ -24,6 +24,8 @@ runs:
     - name: Create vCluster
       shell: bash -eux {0}
       run: |
+        docker ps
+        
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
@@ -31,7 +33,10 @@ runs:
         vcluster connect ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
-          --print > ./kubeconfig.yaml &
+          --print > ./kubeconfig.yaml
+        
+        docker ps
+        ps -a
         
         sed -i '/^Forwarding from/d' kubeconfig.yaml
         
