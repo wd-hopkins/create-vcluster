@@ -22,6 +22,7 @@ runs:
       with:
         kubectl-install: false
     - name: Create vCluster
+      id: create-vcluster
       shell: bash -eux {0}
       run: |        
         vcluster create ${{ inputs.vcluster-name }} \
@@ -37,10 +38,9 @@ runs:
         kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
           port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 > /dev/null 2>&1 &
         
-        echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
-        echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
+        echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> "$GITHUB_ENV"
+        echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> "$GITHUB_OUTPUT"
     - name: Delete vCluster post step
-      id: create-vcluster
       uses: wd-hopkins/create-vcluster/with-post-step@main
       if: always()
       with:
