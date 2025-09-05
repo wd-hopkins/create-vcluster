@@ -37,6 +37,8 @@ runs:
         kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
           port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 &
         
+        ps -a
+        
         echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> $GITHUB_ENV
         echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> $GITHUB_OUTPUT
     - name: Delete vCluster post step
