@@ -63,7 +63,7 @@ runs:
       uses: wd-hopkins/create-vcluster/with-post-step@main
       with:
         main: |
-          exit 0
+          echo "no op"
         post: |
           unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
