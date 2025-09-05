@@ -27,6 +27,7 @@ runs:
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
+          --upgrade \
           --connect=false \
           --silent \
           --print > kubeconfig.yaml
