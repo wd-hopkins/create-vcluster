@@ -10,10 +10,17 @@ inputs:
   vcluster-name:
     description: 'Name of the vcluster'
     required: true
+  delete:
+    description: 'Whether to delete the vcluster after the job has run'
+    required: false
+    default: 'true'
 outputs:
   vcluster-context:
     description: "Context name of the vcluster for use in kubectl commands"
     value: ${{ steps.create-vcluster.outputs.vcluster-context }}
+  vcluster-created:
+    description: "Whether the vcluster was created. False if the vcluster already exists."
+    value: ${{ steps.create-vcluster.outputs.vcluster-created }}
 runs:
   using: "composite"
   steps:
@@ -24,7 +31,9 @@ runs:
     - name: Create vCluster
       id: create-vcluster
       shell: bash -eux {0}
-      run: |        
+      run: |
+        existing_vcluster=$(vcluster list --context ${{ inputs.context }} -n ${{ inputs.namespace }} --output json | yq '.[] | select(.Name == ${{ inputs.vcluster-name }})')
+        
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
           --namespace ${{ inputs.namespace }} \
@@ -38,14 +47,20 @@ runs:
         kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
           port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 > /dev/null 2>&1 &
         
+        if [[ -z "$existing_vcluster" ]]; then
+          echo "vcluster-created=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "vcluster-created=false" >> "$GITHUB_OUTPUT"
+        fi
+        
         echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> "$GITHUB_ENV"
         echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> "$GITHUB_OUTPUT"
     - name: Delete vCluster post step
       uses: wd-hopkins/create-vcluster/with-post-step@main
-      if: always()
+      if: ${{ inputs.delete == 'true' }}
       with:
         main: |
-          echo "no op"
+          echo "will delete in post step"
         post: |
           unset KUBECONFIG
           vcluster delete ${{ inputs.vcluster-name }} \
