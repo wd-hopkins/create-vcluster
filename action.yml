@@ -32,7 +32,7 @@ runs:
       id: create-vcluster
       shell: bash -eux {0}
       run: |
-        existing_vcluster=$(vcluster list --context ${{ inputs.context }} -n ${{ inputs.namespace }} --output json | yq '.[] | select(.Name == ${{ inputs.vcluster-name }})')
+        existing_vcluster=$(vcluster list --context ${{ inputs.context }} -n ${{ inputs.namespace }} --output json | yq '.[] | select(.Name == "${{ inputs.vcluster-name }}")')
         
         vcluster create ${{ inputs.vcluster-name }} \
           --context ${{ inputs.context }} \
