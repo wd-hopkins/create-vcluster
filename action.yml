@@ -14,6 +14,10 @@ inputs:
     description: 'Whether to delete the vcluster after the job has run'
     required: false
     default: 'true'
+  kubeconfig-out-path:
+    description: 'Path to write resulting kubeconfig file to'
+    required: false
+    default: './kubeconfig.yaml'
 outputs:
   vcluster-context:
     description: "Context name of the vcluster for use in kubectl commands"
@@ -30,8 +34,10 @@ runs:
         kubectl-install: false
     - name: Create vCluster
       id: create-vcluster
-      shell: bash -eux {0}
+      shell: bash -euo pipefail {0}
       run: |
+        mkdir -p $(dirname ${{ inputs.kubeconfig-out-path }})
+        
         existing_vcluster=$(vcluster list --context ${{ inputs.context }} -n ${{ inputs.namespace }} --output json | yq '.[] | select(.Name == "${{ inputs.vcluster-name }}")')
         
         vcluster create ${{ inputs.vcluster-name }} \
@@ -40,7 +46,7 @@ runs:
           --upgrade \
           --connect=false \
           --silent \
-          --print > kubeconfig.yaml
+          --print > ${{ inputs.kubeconfig-out-path }}
         
         vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
         
@@ -53,7 +59,7 @@ runs:
           echo "vcluster-created=false" >> "$GITHUB_OUTPUT"
         fi
         
-        echo "KUBECONFIG=${PWD}/kubeconfig.yaml" >> "$GITHUB_ENV"
+        echo "KUBECONFIG=$(readlink -f ${{ inputs.kubeconfig-out-path }})" >> "$GITHUB_ENV"
         echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> "$GITHUB_OUTPUT"
     - name: Delete vCluster post step
       uses: wd-hopkins/create-vcluster/with-post-step@main
