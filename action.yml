@@ -48,7 +48,7 @@ runs:
           --silent \
           --print > ${{ inputs.kubeconfig-out-path }}
         
-        vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' kubeconfig.yaml | cut -d':' -f 3)
+        vcluster_port=$(yq '.clusters[] | select(key = 0) | .cluster.server' ${{ inputs.kubeconfig-out-path }} | cut -d':' -f 3)
         
         kubectl --context ${{ inputs.context }} -n ${{ inputs.namespace }} \
           port-forward svc/${{ inputs.vcluster-name }} "$vcluster_port":443 > /dev/null 2>&1 &
@@ -60,7 +60,7 @@ runs:
         fi
         
         echo "KUBECONFIG=$(readlink -f ${{ inputs.kubeconfig-out-path }})" >> "$GITHUB_ENV"
-        echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' kubeconfig.yaml`)" >> "$GITHUB_OUTPUT"
+        echo "vcluster-context=$(echo -n `yq '.contexts[] | select(key = 0) | .name' ${{ inputs.kubeconfig-out-path }}`)" >> "$GITHUB_OUTPUT"
     - name: Delete vCluster post step
       uses: wd-hopkins/create-vcluster/with-post-step@main
       if: ${{ inputs.delete == 'true' }}
